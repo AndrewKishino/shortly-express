@@ -15,6 +15,7 @@ var Link = require('./app/models/link');
 var Click = require('./app/models/click');
 
 var app = express();
+var sess;
 
 // https://codeforgeek.com/2014/09/manage-session-using-node-js-express-4/
 // http://codetheory.in/using-the-node-js-bcrypt-module-to-hash-and-safely-store-passwords/
@@ -27,12 +28,7 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
-app.use(session({
-  secret: 'keyboard cat',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: true }
-}));
+app.use(session({secret: 'ssshhhhh'}));
 
 
 // app.get('/', function(req, res) {
@@ -157,12 +153,31 @@ app.post('/signup', function(request, response) {
  
     var username = request.body.username;
     var password = request.body.password;
-    var salt = bcrypt.genSaltSync(10);
-    var hash = bcrypt.hashSync(password, salt);
+    // var salt = bcrypt.genSaltSync(10);
+    // var hash = bcrypt.hashSync(password, salt);
 
     //Insert into DB for new user
 
-    User.set({username: username, hash: hash, salt: salt});
+    // User.set({username: username, hash: hash, salt: salt});
+
+    new User({
+          'username': username,
+          'password': password
+          // 'hash': hash,
+          // 'salt': salt
+      }).save().then(function(){
+        var options = {
+          'method': 'POST',
+          'followAllRedirects': true,
+          'uri': 'http://127.0.0.1:4568/login',
+          'json': {
+            'username': username,
+            'password': password
+            // 'salt': salt
+          }
+        };
+      })
+
 
     // var userObj = db.users.findOne({ username: username, password: hash });
      
@@ -182,10 +197,30 @@ app.post('/login', function(request, response) {
  
     var username = request.body.username;
     var password = request.body.password;
-    var salt = bcrypt.genSaltSync(10);
-    var hash = bcrypt.hashSync(password, salt);
+    // var salt = request.body.salt;
+    // var hash = bcrypt.hashSync(password, salt);
 
-    
+    //query DB to check whether username exists. If it does, check whether password matches
+
+    db.knex('users')
+      .where('username', '=', username)
+      .then(function(data) {
+        if (data['0'] && data['0']['username']) {
+          var foundUser = data['0']['username'];
+          var foundPassword = data['0']['password'];
+
+          if (username === foundUser && foundPassword === password) {
+            sess=request.session;
+            sess.user = username;
+            response.redirect('/index');
+          }
+        }
+      })
+        
+
+    //If username or password does not exist, redirect to /login
+
+    //if it does, redirect to index?
 
 
     // var userObj = db.users.findOne({ username: username, password: hash });
