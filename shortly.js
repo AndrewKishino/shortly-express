@@ -2,7 +2,9 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-var session = require('express-session')
+var session = require('express-session');
+var bcrypt = require('./node_modules/bcrypt-nodejs');
+var Bookshelf = require('bookshelf');
 
 
 var db = require('./app/config');
@@ -12,8 +14,10 @@ var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
 
-
 var app = express();
+
+// https://codeforgeek.com/2014/09/manage-session-using-node-js-express-4/
+// http://codetheory.in/using-the-node-js-bcrypt-module-to-hash-and-safely-store-passwords/
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -157,17 +161,20 @@ app.post('/signup', function(request, response) {
     var hash = bcrypt.hashSync(password, salt);
 
     //Insert into DB for new user
-    var userObj = db.users.findOne({ username: username, password: hash });
+
+    User.set({username: username, hash: hash, salt: salt});
+
+    // var userObj = db.users.findOne({ username: username, password: hash });
      
-    if(userObj){
-        request.session.regenerate(function(){
-            request.session.user = userObj.username;
-            response.redirect('/restricted');
-        });
-    }
-    else {
-        res.redirect('login');
-    }
+    // if(userObj){
+    //   request.session.regenerate(function(){
+    //     request.session.user = userObj.username;
+    //     response.redirect('/restricted');
+    //   });
+    // }
+    // else {
+    //   res.redirect('login');
+    // }
  
 });
 
@@ -177,17 +184,21 @@ app.post('/login', function(request, response) {
     var password = request.body.password;
     var salt = bcrypt.genSaltSync(10);
     var hash = bcrypt.hashSync(password, salt);
-    var userObj = db.users.findOne({ username: username, password: hash });
+
+    
+
+
+    // var userObj = db.users.findOne({ username: username, password: hash });
      
-    if(userObj){
-        request.session.regenerate(function(){
-            request.session.user = userObj.username;
-            response.redirect('/restricted');
-        });
-    }
-    else {
-        res.redirect('login');
-    }
+    // if(userObj){
+    //     request.session.regenerate(function(){
+    //         request.session.user = userObj.username;
+    //         response.redirect('/restricted');
+    //     });
+    // }
+    // else {
+    //     res.redirect('login');
+    // }
  
 });
 
