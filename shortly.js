@@ -31,16 +31,6 @@ app.use(express.static(__dirname + '/public'));
 app.use(session({secret: 'ssshhhhh'}));
 
 
-// app.get('/', function(req, res) {
-//     if (req.session.user) {
-//       res.render('index');
-//     } else {
-//       req.session.error = 'Access denied!';
-//       res.redirect('/login');
-//     }
-//   }  
-// );
-
 app.get('/', 
 function(req, res) {
   if (req.session.user) {
@@ -128,25 +118,16 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
-// app.get('/login', function(request, response) {
-//    response.send('<form method="post" action="/login">' +
-//   '<p>' +
-//     '<label>Username:</label>' +
-//     '<input type="text" name="username">' +
-//   '</p>' +
-//   '<p>' +
-//     '<label>Password:</label>' +
-//     '<input type="text" name="password">' +
-//   '</p>' +
-//   '<p>' +
-//     '<input type="submit" value="Login">' +
-//   '</p>' +
-//   '</form>');
-// });
 
 app.get('/signup', 
 function(req, res) {
   res.render('signup');
+});
+
+app.get('/logout', 
+function(req, res) {
+  req.session.destroy();
+  res.redirect('/login');
 });
 
 app.post('/signup', function(request, response) {
@@ -166,17 +147,10 @@ app.post('/signup', function(request, response) {
           // 'hash': hash,
           // 'salt': salt
       }).save().then(function(){
-        var options = {
-          'method': 'POST',
-          'followAllRedirects': true,
-          'uri': 'http://127.0.0.1:4568/login',
-          'json': {
-            'username': username,
-            'password': password
-            // 'salt': salt
-          }
-        };
-      })
+        sess=request.session;
+        sess.user = username;
+        response.redirect('/index');
+      });
 
 
     // var userObj = db.users.findOne({ username: username, password: hash });
@@ -264,6 +238,15 @@ app.get('/*', function(req, res) {
     }
   });
 });
+
+
+  // $('.logout').on('click', function(){
+  //   app.post('/logout', function(req, res) {
+  //     res.redirect('/logout')
+  //   })
+  // });
+
+
 
 console.log('Shortly is listening on 4568');
 app.listen(4568);
