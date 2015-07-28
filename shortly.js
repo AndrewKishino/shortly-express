@@ -2,6 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var session = require('express-session')
 
 
 var db = require('./app/config');
@@ -10,6 +11,7 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+
 
 var app = express();
 
@@ -21,23 +23,72 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+app.use(session({
+  secret: 'keyboard cat',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true }
+}));
 
+
+// app.get('/', function(req, res) {
+//     if (req.session.user) {
+//       res.render('index');
+//     } else {
+//       req.session.error = 'Access denied!';
+//       res.redirect('/login');
+//     }
+//   }  
+// );
 
 app.get('/', 
 function(req, res) {
-  res.render('index');
+  if (req.session.user) {
+    res.render('index')
+  } else {
+    req.session.error = 'Access denied!';
+    res.redirect('/login');
+  }
+
+  // if(true) {
+  //   res.render('index');
+  // } else {
+  //   res.render('login');
+  // }
+});
+
+app.get('/login', 
+function(req, res) {
+  res.render('login');
 });
 
 app.get('/create', 
 function(req, res) {
-  res.render('index');
+  if (req.session.user) {
+    res.render('index')
+  } else {
+    req.session.error = 'Access denied!';
+    res.redirect('/login');
+  }
+
+  // res.render('index');
 });
 
 app.get('/links', 
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.send(200, links.models);
-  });
+
+  if (req.session.user) {
+    Links.reset().fetch().then(function(links) {
+      res.send(200, links.models);
+    });
+  } else {
+    req.session.error = 'Access denied!';
+    res.redirect('/login');
+  }
+
+  // Links.reset().fetch().then(function(links) {
+  //   res.send(200, links.models);
+  // });
 });
 
 app.post('/links', 
@@ -77,8 +128,68 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+// app.get('/login', function(request, response) {
+//    response.send('<form method="post" action="/login">' +
+//   '<p>' +
+//     '<label>Username:</label>' +
+//     '<input type="text" name="username">' +
+//   '</p>' +
+//   '<p>' +
+//     '<label>Password:</label>' +
+//     '<input type="text" name="password">' +
+//   '</p>' +
+//   '<p>' +
+//     '<input type="submit" value="Login">' +
+//   '</p>' +
+//   '</form>');
+// });
 
+app.get('/signup', 
+function(req, res) {
+  res.render('signup');
+});
 
+app.post('/signup', function(request, response) {
+ 
+    var username = request.body.username;
+    var password = request.body.password;
+    var salt = bcrypt.genSaltSync(10);
+    var hash = bcrypt.hashSync(password, salt);
+
+    //Insert into DB for new user
+    var userObj = db.users.findOne({ username: username, password: hash });
+     
+    if(userObj){
+        request.session.regenerate(function(){
+            request.session.user = userObj.username;
+            response.redirect('/restricted');
+        });
+    }
+    else {
+        res.redirect('login');
+    }
+ 
+});
+
+app.post('/login', function(request, response) {
+ 
+    var username = request.body.username;
+    var password = request.body.password;
+    var salt = bcrypt.genSaltSync(10);
+    var hash = bcrypt.hashSync(password, salt);
+    var userObj = db.users.findOne({ username: username, password: hash });
+     
+    if(userObj){
+        request.session.regenerate(function(){
+            request.session.user = userObj.username;
+            response.redirect('/restricted');
+        });
+    }
+    else {
+        res.redirect('login');
+    }
+ 
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
